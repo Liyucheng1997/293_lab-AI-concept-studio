@@ -1,0 +1,15 @@
+{
+  "name": "ai-concept-studio",
+  "version": "1.0.0",
+  "description": "AI 概念图生成站 —— 服装设计 / 美甲 / 刺青 / 寿司摆盘 / 理发造型，基于 Nano Banana (Gemini Image) API",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

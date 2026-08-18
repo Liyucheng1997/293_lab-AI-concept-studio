@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 概念图工作室 · Concept Studio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <header class="topbar glass">
+    <div class="brand">
+      <span class="logo">🍌</span>
+      <div>
+        <h1>AI 概念图工作室</h1>
+        <p>服装 · 美甲 · 刺青 · 寿司摆盘 · 理发造型 &nbsp;·&nbsp; Nano Banana</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <select id="modelSelect" title="选择模型"></select>
+      <button id="keyBtn" class="pill" title="设置 API Key">🔑 API Key</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main class="layout">
+    <section class="panel form-panel">
+      <h2 id="catTitle"></h2>
+      <p class="cat-desc" id="catDesc"></p>
+
+      <label class="field">
+        <span>标题（可选，留空自动生成）</span>
+        <input type="text" id="title" placeholder="例：春季新款 A 组" />
+      </label>
+
+      <div id="fields" class="fields"></div>
+
+      <label class="field">
+        <span>补充描述（可选）</span>
+        <textarea id="extra" rows="2" placeholder="任何额外要求：氛围、光线、品牌感、避免的元素……"></textarea>
+      </label>
+
+      <div class="field">
+        <span>参考图（可选，最多 3 张）</span>
+        <p class="hint" id="refHint"></p>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="image/*" multiple hidden />
+          <span>点击、拖拽或 Ctrl+V 粘贴图片</span>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="row">
+        <label class="field">
+          <span>画幅</span>
+          <select id="aspect">
+            <option value="1:1">1:1 方形</option>
+            <option value="3:4">3:4 竖版</option>
+            <option value="4:3">4:3 横版</option>
+            <option value="9:16">9:16 手机竖屏</option>
+            <option value="16:9">16:9 宽屏</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>生成数量</span>
+          <select id="count">
+            <option value="1">1 张</option>
+            <option value="2" selected>2 张</option>
+            <option value="3">3 张</option>
+            <option value="4">4 张</option>
+          </select>
+        </label>
+      </div>
+
+      <details class="prompt-box">
+        <summary>查看 / 编辑最终提示词</summary>
+        <textarea id="prompt" rows="6"></textarea>
+        <button id="resetPrompt" class="pill small">恢复自动生成</button>
+      </details>
+
+      <button id="generate" class="primary big">生成概念图</button>
+      <p class="status" id="status"></p>
+    </section>
+
+    <section class="panel glass gallery-panel">
+      <div class="gallery-head">
+        <div>
+          <h2 id="galleryTitle">画廊</h2>
+          <p class="muted small-text" id="galleryStats"></p>
+        </div>
+        <div class="gallery-tools">
+          <div class="detail-toggles" id="detailToggles" title="选择卡片下方显示哪些信息">
+            <label><input type="checkbox" data-d="title" checked> 标题</label>
+            <label><input type="checkbox" data-d="size" checked> 尺寸</label>
+            <label><input type="checkbox" data-d="cost" checked> 价格</label>
+            <label><input type="checkbox" data-d="tokens"> Token</label>
+            <label><input type="checkbox" data-d="model"> 模型</label>
+            <label><input type="checkbox" data-d="time"> 时间</label>
+            <label><input type="checkbox" data-d="prompt"> 提示词</label>
+          </div>
+          <button id="clearGallery" class="pill small danger">清空本项目</button>
+        </div>
+      </div>
+      <div class="gallery" id="gallery"></div>
+      <div class="empty hidden" id="emptyState">
+        <p>这个项目还没有图片。</p>
+        <p class="muted">在左侧填写选项，点击「生成概念图」，结果会自动保存到 <code>data/gallery/</code> 目录。</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="keyModal">
+    <div class="modal-card glass-solid">
+      <h3>Gemini API Key</h3>
+      <p class="muted">Key 仅保存在你的浏览器 localStorage 中，请求时通过本站后端转发到 Google。<br/>
+        在 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免费获取。
+        若服务器已配置 <code>.env</code>，可留空。</p>
+      <input id="keyInput" type="password" placeholder="AIza..." />
+      <div class="modal-actions">
+        <button id="keyClear" class="pill">清除</button>
+        <button id="keySave" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox hidden" id="lightbox">
+    <div class="lb-stage" id="lbStage"><img id="lightboxImg" alt="放大预览" draggable="false" /></div>
+    <div class="lb-bar glass-dark">
+      <span id="lbInfo"></span>
+      <span class="lb-zoom" id="lbZoom">100%</span>
+      <button class="pill small" id="lbReset">重置</button>
+      <button class="pill small" id="lbClose">关闭 (Esc)</button>
+    </div>
+    <p class="lb-tip">滚轮缩放 · 拖拽平移 · 双击复位</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
