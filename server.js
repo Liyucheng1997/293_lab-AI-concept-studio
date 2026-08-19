@@ -44,7 +44,7 @@ function calcCost(model, usage = {}) {
 }
 
 // 从 PNG / JPEG / WebP 二进制头解析尺寸
-function imageSize(buf) {
+function parseImageSize(buf) {
   try {
     if (buf[0] === 0x89 && buf.toString("ascii", 1, 4) === "PNG") {
       return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
@@ -182,7 +182,7 @@ app.post("/api/generate", async (req, res) => {
       title: (typeof title === "string" && title.trim().slice(0, 120)) || "未命名",
       prompt: prompt.trim(), model: useModel, aspectRatio: aspectRatio || "1:1", imageSize: generationConfig.imageConfig?.imageSize || "1K",
       refCount: parts.length - 1, mimeType, bytes: buf.length,
-      ...imageSize(buf),
+      ...parseImageSize(buf),
       cost: calcCost(useModel, data.usageMetadata),
       createdAt: Date.now(),
     };
