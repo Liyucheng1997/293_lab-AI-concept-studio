@@ -77,72 +77,119 @@ const CATEGORIES = {
   },
   supermarket: {
     name: "🛒 超市",
-    title: "超市陈列 / 促销概念图",
-    desc: "货架陈列、端架堆头、生鲜区布置、促销海报与门头，开店/改陈前先看效果。",
-    refHint: "上传店内现场照片，可在原货架上预览新陈列；也可上传商品图或参考陈列。",
-    fields: [
-      { key: "scene", label: "场景类型", type: "select", options: ["货架陈列（整排）", "端架 / 堆头", "生鲜果蔬区", "冷藏 / 冷冻区", "烘焙 / 熟食区", "收银区 + 冲动购买带", "门头招牌 + 入口", "促销海报 / DM 单", "自助结账区", "整店俯视布局图"] },
-      { key: "category", label: "商品品类", type: "text", placeholder: "例：进口零食 / 有机蔬果 / 饮料 / 日化" },
-      { key: "format", label: "业态风格", type: "select", options: ["社区便利店", "精品超市（如 Ole'）", "仓储会员店（如 Costco）", "日式超市", "欧美大卖场", "生鲜市集风", "无人智慧超市"] },
-      { key: "theme", label: "促销 / 季节主题", type: "select", options: ["无", "开业大吉", "周年庆", "春节年货", "中秋", "双十一 / 618", "夏日清凉", "圣诞", "会员日", "折扣清仓"] },
-      { key: "color", label: "主色调", type: "text", placeholder: "例：清爽绿白 / 品牌红黄" },
-      { key: "view", label: "视角", type: "select", options: ["顾客视角平视", "45° 斜俯", "过道纵深透视", "近景商品特写", "俯视平面图"] },
-    ],
-    prompt: (v, hasRef) => `Supermarket visual merchandising concept: ${v.scene}, products: ${v.category || "mixed grocery"}, store format: ${v.format}${v.theme !== "无" ? `, promotional theme: ${v.theme}` : ""}, color scheme: ${v.color || "clean and bright"}. Camera: ${v.view}. Neat, well-stocked, realistic retail interior photography with proper lighting, price tags and signage where appropriate, no readable text errors.${hasRef ? " If a store photo is provided, keep the store's architecture and fixtures and redo only the merchandising/decoration; otherwise use references for products or display style." : ""}`,
+    modes: {
+      store: {
+        label: "🏪 门店概念图",
+        title: "超市陈列 / 促销概念图",
+        desc: "货架陈列、端架堆头、生鲜区布置、促销海报与门头，开店/改陈前先看效果。",
+        refHint: "上传店内现场照片，可在原货架上预览新陈列；也可上传商品图或参考陈列。",
+        fields: [
+          { key: "scene", label: "场景类型", type: "select", options: ["货架陈列（整排）", "端架 / 堆头", "生鲜果蔬区", "冷藏 / 冷冻区", "烘焙 / 熟食区", "收银区 + 冲动购买带", "门头招牌 + 入口", "促销海报 / DM 单", "自助结账区", "整店俯视布局图"] },
+          { key: "category", label: "商品品类", type: "text", placeholder: "例：进口零食 / 有机蔬果 / 饮料 / 日化" },
+          { key: "format", label: "业态风格", type: "select", options: ["社区便利店", "精品超市（如 Ole'）", "仓储会员店（如 Costco）", "日式超市", "欧美大卖场", "生鲜市集风", "无人智慧超市"] },
+          { key: "theme", label: "促销 / 季节主题", type: "select", options: ["无", "开业大吉", "周年庆", "春节年货", "中秋", "双十一 / 618", "夏日清凉", "圣诞", "会员日", "折扣清仓"] },
+          { key: "color", label: "主色调", type: "text", placeholder: "例：清爽绿白 / 品牌红黄" },
+          { key: "view", label: "视角", type: "select", options: ["顾客视角平视", "45° 斜俯", "过道纵深透视", "近景商品特写", "俯视平面图"] },
+        ],
+        prompt: (v, hasRef) => `Supermarket visual merchandising concept: ${v.scene}, products: ${v.category || "mixed grocery"}, store format: ${v.format}${v.theme !== "无" ? `, promotional theme: ${v.theme}` : ""}, color scheme: ${v.color || "clean and bright"}. Camera: ${v.view}. Neat, well-stocked, realistic retail interior photography with proper lighting, price tags and signage where appropriate, no readable text errors.${hasRef ? " If a store photo is provided, keep the store's architecture and fixtures and redo only the merchandising/decoration; otherwise use references for products or display style." : ""}`,
+      },
+      ecom: ecomMode({
+        title: "超市商品 · 电商产品图",
+        desc: "把店里的水果、生鲜、零食、日用品拍一张原图，生成可直接上架小程序 / 外卖平台 / 社群团购的产品图，或打印成价签海报。",
+        productPlaceholder: "例：进口车厘子 / 有机西兰花 / 五常大米 / 洗衣液",
+        bgs: ["纯白 #FFFFFF（主图规范）", "浅灰渐变影棚", "原木砧板 / 餐桌", "果园 / 农场（生鲜）", "厨房场景", "清新绿叶 + 水珠", "红色促销氛围", "竹篮 / 麻布（有机感）", "冰块 / 冷藏感（海鲜饮料）", "纯色（在主色调里写）"],
+        platforms: ["美团 / 饿了么 / 京东到家", "微信小程序 / 社群团购", "淘宝 / 拼多多", "抖音 / 快手（促销感）", "线下价签 / 海报打印"],
+        propsPlaceholder: "例：水珠、切开的果肉、绿叶、‘特价’贴纸位（留空则不加）",
+        extraPrompt: "For fresh produce make it look crisp, juicy and freshly harvested; for packaged goods keep the packaging perfectly legible.",
+      }),
+    },
   },
   department: {
     name: "🏬 百货店",
-    title: "百货商场美陈 / 橱窗概念图",
-    desc: "橱窗、专柜、中庭美陈、节日装饰、导视——方案汇报前先出效果图。",
-    refHint: "上传商场现场照片，可在原空间上预览美陈方案；也可上传品牌 VI 或参考图。",
-    fields: [
-      { key: "scene", label: "场景类型", type: "select", options: ["临街橱窗", "品牌专柜 / 中岛", "中庭大型美陈装置", "节日主题装饰", "扶梯 / 通道导视", "VIP 休息区", "化妆品区", "珠宝腕表区", "儿童 / 玩具区", "商场外立面 + 灯光"] },
-      { key: "category", label: "商品 / 品牌品类", type: "text", placeholder: "例：轻奢女装 / 香水彩妆 / 家居生活" },
-      { key: "theme", label: "主题", type: "select", options: ["春夏新品", "秋冬系列", "圣诞", "春节 / 新年", "情人节", "周年庆", "母亲节", "国庆", "艺术展联名", "无主题日常"] },
-      { key: "style", label: "风格", type: "select", options: ["奢华金属感", "极简高级灰", "艺术装置 / 雕塑", "自然植物", "复古 Art Deco", "未来科技 / 灯光", "梦幻马卡龙", "东方美学"] },
-      { key: "color", label: "主色调", type: "text", placeholder: "例：香槟金 + 白 / 圣诞红绿" },
-      { key: "view", label: "视角", type: "select", options: ["顾客正面平视", "45° 斜俯", "低角度仰视（气势）", "近景细节", "全景大场景"] },
-    ],
-    prompt: (v, hasRef) => `Department store visual merchandising concept: ${v.scene} for ${v.category || "premium retail brands"}, theme: ${v.theme}, style: ${v.style}, color scheme: ${v.color || "elegant palette"}. Camera: ${v.view}. High-end retail interior rendering / photography quality, dramatic yet tasteful lighting, premium materials, polished floors, realistic scale of props and mannequins.${hasRef ? " If a photo of the actual space is provided, keep its architecture and only add the display design; otherwise use references for brand identity or style." : ""}`,
+    modes: {
+      store: {
+        label: "🏬 门店概念图",
+        title: "百货商场美陈 / 橱窗概念图",
+        desc: "橱窗、专柜、中庭美陈、节日装饰、导视——方案汇报前先出效果图。",
+        refHint: "上传商场现场照片，可在原空间上预览美陈方案；也可上传品牌 VI 或参考图。",
+        fields: [
+          { key: "scene", label: "场景类型", type: "select", options: ["临街橱窗", "品牌专柜 / 中岛", "中庭大型美陈装置", "节日主题装饰", "扶梯 / 通道导视", "VIP 休息区", "化妆品区", "珠宝腕表区", "儿童 / 玩具区", "商场外立面 + 灯光"] },
+          { key: "category", label: "商品 / 品牌品类", type: "text", placeholder: "例：轻奢女装 / 香水彩妆 / 家居生活" },
+          { key: "theme", label: "主题", type: "select", options: ["春夏新品", "秋冬系列", "圣诞", "春节 / 新年", "情人节", "周年庆", "母亲节", "国庆", "艺术展联名", "无主题日常"] },
+          { key: "style", label: "风格", type: "select", options: ["奢华金属感", "极简高级灰", "艺术装置 / 雕塑", "自然植物", "复古 Art Deco", "未来科技 / 灯光", "梦幻马卡龙", "东方美学"] },
+          { key: "color", label: "主色调", type: "text", placeholder: "例：香槟金 + 白 / 圣诞红绿" },
+          { key: "view", label: "视角", type: "select", options: ["顾客正面平视", "45° 斜俯", "低角度仰视（气势）", "近景细节", "全景大场景"] },
+        ],
+        prompt: (v, hasRef) => `Department store visual merchandising concept: ${v.scene} for ${v.category || "premium retail brands"}, theme: ${v.theme}, style: ${v.style}, color scheme: ${v.color || "elegant palette"}. Camera: ${v.view}. High-end retail interior rendering / photography quality, dramatic yet tasteful lighting, premium materials, polished floors, realistic scale of props and mannequins.${hasRef ? " If a photo of the actual space is provided, keep its architecture and only add the display design; otherwise use references for brand identity or style." : ""}`,
+      },
+      ecom: ecomMode({
+        title: "百货商品 · 电商产品图",
+        desc: "服饰、化妆品、箱包、家居、小家电——柜台随手拍一张，生成可上架天猫 / 京东 / 小红书的商品主图、场景图与海报，帮门店把货搬到线上。",
+        productPlaceholder: "例：真丝丝巾 / 精华液 / 保温杯 / 香薰蜡烛 / 皮质手袋",
+        bgs: ["纯白 #FFFFFF（主图规范）", "浅灰渐变影棚", "大理石台面（高级感）", "丝绒 / 缎面布景（奢品）", "原木 + 绿植（家居感）", "梳妆台 / 浴室（美妆）", "都市街拍 / 咖啡馆（服饰箱包）", "几何展台 + 影棚光", "节日礼盒氛围（红金）", "纯色（在主色调里写）"],
+        platforms: ["天猫 / 京东", "小红书 / 抖音（种草感）", "微信小程序 / 会员商城", "唯品会 / 得物", "线下灯箱 / 海报打印"],
+        propsPlaceholder: "例：丝带、干花、亚克力展台、水波纹光影（留空则不加）",
+        extraPrompt: "Premium editorial retail look; garments and accessories should show fabric texture and craftsmanship, cosmetics should have clean glossy packaging.",
+      }),
+    },
   },
   pet: {
     name: "🐶 宠物店",
-    title: "宠物美容 / 宠物店概念图",
-    desc: "宠物美容造型预览、店铺空间、宠物服饰周边、宠物写真——洗剪前先给主人看效果。",
-    refHint: "上传顾客宠物的照片，可保留宠物本体直接「换造型」；也可上传店铺或商品参考图。",
-    fields: [
-      { key: "use", label: "用途", type: "select", options: ["宠物美容造型预览", "宠物服饰 / 配饰概念", "宠物摄影写真", "宠物店门店空间", "宠物用品陈列 / 商品海报", "宠物寄养 / 乐园区"] },
-      { key: "animal", label: "宠物种类", type: "select", options: ["泰迪 / 贵宾", "比熊", "柴犬", "柯基", "金毛", "博美", "雪纳瑞", "边牧", "法斗", "布偶猫", "英短", "美短", "橘猫", "兔子", "仓鼠 / 龙猫", "其他（在补充描述里写）"] },
-      { key: "style", label: "造型 / 风格", type: "select", options: ["泰迪熊装", "羊羔装", "贵宾装（欧陆式）", "运动装（短毛清爽）", "自然长毛修剪", "圆脸小熊头", "萌系染色（耳朵/尾巴）", "节日主题（蝴蝶结/围巾）", "无特定造型"] },
-      { key: "mood", label: "氛围", type: "select", options: ["温馨可爱", "清新自然", "高级简约", "活泼卡通", "节日喜庆", "复古文艺"] },
-      { key: "color", label: "主色调", type: "text", placeholder: "例：奶油白 + 薄荷绿" },
-      { key: "view", label: "展示方式", type: "select", options: ["宠物正面全身照", "宠物侧面 45°", "美容前后对比", "怀抱 / 互动生活感", "店铺空间全景", "商品平铺 / 海报"] },
-    ],
-    prompt: (v, hasRef) => `Pet shop concept: purpose — ${v.use}; pet: ${v.animal}; grooming style / design: ${v.style}; mood: ${v.mood}; color scheme: ${v.color || "soft harmonious palette"}. Presentation: ${v.view}. Realistic photography, healthy fluffy fur with fine detail, correct animal anatomy, clean bright pet-salon lighting.${hasRef ? " If a photo of the customer's pet is provided, keep the same pet (breed, markings, face, eyes) and only change the grooming/outfit; if a store photo is provided keep its architecture and redo the decoration; otherwise use references for style." : ""}`,
+    modes: {
+      store: {
+        label: "🐾 门店 / 美容概念图",
+        title: "宠物美容 / 宠物店概念图",
+        desc: "宠物美容造型预览、店铺空间、宠物服饰周边、宠物写真——洗剪前先给主人看效果。",
+        refHint: "上传顾客宠物的照片，可保留宠物本体直接「换造型」；也可上传店铺或商品参考图。",
+        fields: [
+          { key: "use", label: "用途", type: "select", options: ["宠物美容造型预览", "宠物服饰 / 配饰概念", "宠物摄影写真", "宠物店门店空间", "宠物用品陈列 / 商品海报", "宠物寄养 / 乐园区"] },
+          { key: "animal", label: "宠物种类", type: "select", options: ["泰迪 / 贵宾", "比熊", "柴犬", "柯基", "金毛", "博美", "雪纳瑞", "边牧", "法斗", "布偶猫", "英短", "美短", "橘猫", "兔子", "仓鼠 / 龙猫", "其他（在补充描述里写）"] },
+          { key: "style", label: "造型 / 风格", type: "select", options: ["泰迪熊装", "羊羔装", "贵宾装（欧陆式）", "运动装（短毛清爽）", "自然长毛修剪", "圆脸小熊头", "萌系染色（耳朵/尾巴）", "节日主题（蝴蝶结/围巾）", "无特定造型"] },
+          { key: "mood", label: "氛围", type: "select", options: ["温馨可爱", "清新自然", "高级简约", "活泼卡通", "节日喜庆", "复古文艺"] },
+          { key: "color", label: "主色调", type: "text", placeholder: "例：奶油白 + 薄荷绿" },
+          { key: "view", label: "展示方式", type: "select", options: ["宠物正面全身照", "宠物侧面 45°", "美容前后对比", "怀抱 / 互动生活感", "店铺空间全景", "商品平铺 / 海报"] },
+        ],
+        prompt: (v, hasRef) => `Pet shop concept: purpose — ${v.use}; pet: ${v.animal}; grooming style / design: ${v.style}; mood: ${v.mood}; color scheme: ${v.color || "soft harmonious palette"}. Presentation: ${v.view}. Realistic photography, healthy fluffy fur with fine detail, correct animal anatomy, clean bright pet-salon lighting.${hasRef ? " If a photo of the customer's pet is provided, keep the same pet (breed, markings, face, eyes) and only change the grooming/outfit; if a store photo is provided keep its architecture and redo the decoration; otherwise use references for style." : ""}`,
+      },
+      ecom: ecomMode({
+        title: "宠物用品 · 电商产品图",
+        desc: "狗罐头、猫粮、零食、玩具、牵引绳、宠物窝——拍一张原图，生成可上架淘宝 / 拼多多 / 小程序的产品主图和场景图。",
+        productPlaceholder: "例：狗罐头 / 冻干猫粮 / 磨牙棒 / 猫抓板 / 宠物窝",
+        bgs: ["纯白 #FFFFFF（主图规范）", "浅灰渐变影棚", "客厅地毯 + 宠物在旁", "原木桌面 + 食盆", "户外草地（狗）", "猫爬架 / 窗台（猫）", "清新蓝绿（健康感）", "暖黄温馨家居", "节日礼盒氛围", "纯色（在主色调里写）"],
+        platforms: ["淘宝 / 天猫 / 京东", "拼多多 / 抖音（促销感）", "微信小程序 / 社群", "小红书（生活感）", "线下价签 / 海报打印"],
+        propsPlaceholder: "例：一只泰迪在旁边看着、狗爪印、撒出的几粒粮（留空则不加）",
+        extraPrompt: "If a pet appears in the scene it must be a healthy, realistic animal with correct anatomy and must not obscure the product; the product stays the hero.",
+      }),
+    },
   },
-  product: {
-    name: "🛍 电商产品图",
-    title: "电商 / 打印用产品图",
-    desc: "上传商品原图（狗罐头、水果、百货商品……），保持产品本身不变，一键换成白底主图、场景图、海报或细节图，可直接上架或打印。",
-    refHint: "⚠ 请务必上传产品原图（手机随手拍即可，最好清晰、无遮挡）。模型会保留产品的形状、包装、文字与 Logo，只重做背景、光线和构图。",
+};
+
+/** 电商产品图模式（超市 / 百货 / 宠物店共用，按行业定制选项） */
+function ecomMode(o) {
+  return {
+    label: "🛍 电商产品图",
+    title: o.title,
+    desc: o.desc,
+    refHint: "⚠ 请上传商品原图（手机随手拍即可，尽量清晰、无遮挡；可多拍 2-3 个角度一起传）。模型会原样保留商品的形状、包装、文字与 Logo，只重做背景、光线和构图。",
     needsRef: true,
     fields: [
       { key: "use", label: "输出类型", type: "select", options: ["电商主图（纯白底）", "场景生活图", "促销海报 / Banner", "细节特写", "多角度组图（3-4 视角）", "堆叠 / 组合陈列图", "手持 / 使用场景图", "线下打印海报（大幅留白）"] },
-      { key: "product", label: "产品名称 / 品类", type: "text", placeholder: "例：狗罐头 / 进口车厘子 / 保温杯 / 面霜" },
-      { key: "bg", label: "背景 / 场景", type: "select", options: ["纯白 #FFFFFF", "浅灰渐变影棚", "大理石台面", "原木桌面", "厨房 / 餐桌", "自然户外 / 草地", "果园 / 农场（生鲜）", "宠物家居场景", "高级黑底", "节日氛围（红金）", "纯色（在主色调里写）"] },
+      { key: "product", label: "商品名称", type: "text", placeholder: o.productPlaceholder },
+      { key: "bg", label: "背景 / 场景", type: "select", options: o.bgs },
       { key: "style", label: "风格", type: "select", options: ["电商标准干净", "高端质感", "清新明亮", "促销热闹", "极简北欧", "国潮 / 新中式", "自然有机"] },
-      { key: "platform", label: "目标平台", type: "select", options: ["淘宝 / 天猫 / 京东", "拼多多 / 抖音（促销感）", "亚马逊 / Shopee（白底规范）", "小红书 / Instagram（生活感）", "线下打印（海报 / 展架）", "菜单 / 价签"] },
+      { key: "platform", label: "目标平台", type: "select", options: o.platforms },
       { key: "color", label: "主色调 / 品牌色", type: "text", placeholder: "例：品牌蓝 + 白 / 暖黄" },
-      { key: "props", label: "道具 / 点缀", type: "text", placeholder: "例：新鲜叶子、水珠、狗爪印、丝带（留空则不加）" },
-      { key: "light", label: "光线", type: "select", options: ["柔和影棚光", "自然窗光", "硬光高对比", "逆光通透（生鲜）", "顶光俯拍"] },
+      { key: "props", label: "道具 / 点缀", type: "text", placeholder: o.propsPlaceholder },
+      { key: "light", label: "光线", type: "select", options: ["柔和影棚光", "自然窗光", "硬光高对比", "逆光通透", "顶光俯拍"] },
     ],
-    prompt: (v, hasRef) => `E-commerce product photography: ${v.use} for "${v.product || "the product"}". Background/scene: ${v.bg}. Style: ${v.style}, target platform: ${v.platform}, color scheme: ${v.color || "match the product"}${v.props ? `, props: ${v.props}` : ", no extra props"}. Lighting: ${v.light}. Commercial-grade, tack-sharp focus on the product, accurate colors, realistic shadows/reflections, no watermarks, no invented text or logos.${hasRef ? " CRITICAL: the reference photo shows the exact product to feature — keep its shape, proportions, packaging design, label text, logo and colors EXACTLY as-is; do not redesign it. Only re-light, recompose and replace the background/scene." : " Render a generic but realistic product."}`,
-  },
-};
+    prompt: (v, hasRef) => `E-commerce product photography: ${v.use} for "${v.product || "the product"}". Background/scene: ${v.bg}. Style: ${v.style}, target platform: ${v.platform}, color scheme: ${v.color || "match the product"}${v.props ? `, props: ${v.props}` : ", no extra props"}. Lighting: ${v.light}. Commercial-grade, tack-sharp focus on the product, accurate colors, realistic shadows/reflections, no watermarks, no invented text or logos. ${o.extraPrompt}${hasRef ? " CRITICAL: the reference photo(s) show the exact product to feature — keep its shape, proportions, packaging design, label text, logo and colors EXACTLY as-is; do not redesign it. Only re-light, recompose and replace the background/scene." : " Render a generic but realistic product."}`,
+  };
+}
 
 /* ========== 状态 ========== */
 const $ = (id) => document.getElementById(id);
 let currentCat = "fashion";
+let currentMode = null; // 有 modes 的分类当前所选模式（store / ecom）
 let refImages = []; // {mimeType, data, url}
 let promptDirty = false;
 let serverConfig = { hasServerKey: false, defaultModel: "gemini-2.5-flash-image", models: [], usdCny: 7.2 };
@@ -182,18 +229,47 @@ async function init() {
   refreshCounts();
 }
 
-async function selectCategory(key) {
+/** 当前生效的定义：无模式的分类返回自身，有模式的返回当前模式 */
+function activeDef() {
+  const c = CATEGORIES[currentCat];
+  return c.modes ? c.modes[currentMode] || c.modes[Object.keys(c.modes)[0]] : c;
+}
+
+async function selectCategory(key, mode) {
+  const changedCat = key !== currentCat;
   currentCat = key;
   localStorage.setItem("cat", key);
   const c = CATEGORIES[key];
+  if (c.modes) {
+    currentMode = mode || localStorage.getItem(`mode:${key}`) || Object.keys(c.modes)[0];
+    if (!c.modes[currentMode]) currentMode = Object.keys(c.modes)[0];
+    localStorage.setItem(`mode:${key}`, currentMode);
+  } else currentMode = null;
+  const d = activeDef();
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.key === key));
-  $("catTitle").textContent = c.title;
-  $("catDesc").textContent = c.desc;
-  $("refHint").textContent = c.refHint;
+
+  // 模式切换条（门店概念图 / 电商产品图）
+  const ms = $("modeSwitch");
+  ms.innerHTML = "";
+  ms.classList.toggle("hidden", !c.modes);
+  if (c.modes) {
+    for (const [mk, m] of Object.entries(c.modes)) {
+      const b = document.createElement("button");
+      b.className = "seg" + (mk === currentMode ? " active" : "");
+      b.textContent = m.label;
+      b.onclick = () => selectCategory(key, mk);
+      ms.appendChild(b);
+    }
+  }
+
+  $("catTitle").textContent = d.title;
+  $("catDesc").textContent = d.desc;
+  $("refHint").textContent = d.refHint;
+  $("refHint").classList.toggle("warn", Boolean(d.needsRef));
   $("galleryTitle").textContent = `${c.name} 画廊`;
   const wrap = $("fields");
   wrap.innerHTML = "";
-  for (const f of c.fields) {
+  for (const f of d.fields) {
     const label = document.createElement("label");
     label.className = "field";
     const span = document.createElement("span");
@@ -220,7 +296,7 @@ async function selectCategory(key) {
   }
   promptDirty = false;
   refreshPrompt();
-  await loadGallery();
+  if (changedCat || !galleryItems.length) await loadGallery(); else renderGallery();
 }
 
 function collectValues() {
@@ -229,7 +305,7 @@ function collectValues() {
   return v;
 }
 function buildPrompt() {
-  const c = CATEGORIES[currentCat];
+  const c = activeDef();
   let p = c.prompt(collectValues(), refImages.length > 0);
   const extra = $("extra").value.trim();
   if (extra) p += ` Additional requirements: ${extra}.`;
@@ -238,7 +314,7 @@ function buildPrompt() {
 function refreshPrompt() { if (!promptDirty) $("prompt").value = buildPrompt(); }
 function autoTitle() {
   const v = collectValues();
-  const c = CATEGORIES[currentCat];
+  const c = activeDef();
   // 取前三个有值的字段拼标题
   const parts = c.fields.map((f) => v[f.key]).filter((x) => x && x !== "无").slice(0, 3);
   return parts.join(" · ") || c.title;
@@ -375,7 +451,8 @@ function makeCard(item) {
   const dim = item.width ? `${item.width} × ${item.height}` : "—";
   const cost = item.cost || {};
   const lines = [];
-  if (details.title) lines.push(`<div class="title"><span class="t">${escapeHtml(item.title)}</span><button class="rename" title="重命名">✎</button></div>`);
+  const modeLabel = item.mode && CATEGORIES[item.category]?.modes?.[item.mode]?.label;
+  if (details.title) lines.push(`<div class="title"><span class="t">${escapeHtml(item.title)}</span>${modeLabel ? `<span class="badge">${escapeHtml(modeLabel.replace(/^\S+\s/, ""))}</span>` : ""}<button class="rename" title="重命名">✎</button></div>`);
   if (details.size) lines.push(`<div class="line"><span>尺寸</span><b>${dim} · ${item.aspectRatio} · ${fmtBytes(item.bytes || 0)}</b></div>`);
   if (details.cost) lines.push(`<div class="line"><span>价格</span><b class="cost-tag">${fmtUsd(cost.usd || 0)} ≈ ${fmtCny(cost.cny || 0)}</b></div>`);
   if (details.tokens) lines.push(`<div class="line"><span>Token</span><b>入 ${cost.inputTokens ?? "—"} / 出 ${cost.outputTokens ?? "—"}</b></div>`);
@@ -425,10 +502,10 @@ async function generate() {
   const imageSize = $("imageSize").value;
   const model = $("modelSelect").value;
   const apiKey = localStorage.getItem("apiKey") || "";
-  const category = currentCat;
+  const category = currentCat, mode = currentMode;
   const title = $("title").value.trim() || autoTitle();
   if (!apiKey && !serverConfig.hasServerKey) { $("keyModal").classList.remove("hidden"); return setStatus("请先设置 API Key", true); }
-  if (CATEGORIES[category].needsRef && refImages.length === 0) {
+  if (activeDef().needsRef && refImages.length === 0) {
     if (!confirm("电商产品图建议上传产品原图，否则模型只能凭描述「编」一个产品。\n\n仍要不带参考图继续生成吗？")) return setStatus("请先上传产品原图", true);
   }
   if (imageSize !== "1K" && !model.includes("3-pro")) {
@@ -459,7 +536,7 @@ async function generate() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
-        body: JSON.stringify({ prompt, category, title, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, imageSize: finalSize, model: finalModel }),
+        body: JSON.stringify({ prompt, category, mode, title, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, imageSize: finalSize, model: finalModel }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

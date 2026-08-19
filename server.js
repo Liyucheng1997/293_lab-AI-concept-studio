@@ -25,7 +25,7 @@ const PRICING = {
 };
 const USD_CNY = Number(process.env.USD_CNY || 7.2);
 
-const CATEGORIES = new Set(["fashion", "nails", "tattoo", "sushi", "barber", "supermarket", "department", "pet", "product"]);
+const CATEGORIES = new Set(["fashion", "nails", "tattoo", "sushi", "barber", "supermarket", "department", "pet"]);
 const IMAGE_SIZES = new Set(["1K", "2K", "4K"]);
 const DATA_DIR = path.join(__dirname, "data", "gallery");
 for (const c of CATEGORIES) await fs.mkdir(path.join(DATA_DIR, c), { recursive: true });
@@ -136,7 +136,7 @@ app.post("/api/generate", async (req, res) => {
     const apiKey = req.get("x-api-key") || process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(401).json({ error: "缺少 API Key：请在 .env 中设置 GEMINI_API_KEY，或在页面右上角填写。" });
 
-    const { prompt, images = [], aspectRatio, imageSize, model, category, title } = req.body || {};
+    const { prompt, images = [], aspectRatio, imageSize, model, category, mode, title } = req.body || {};
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) return res.status(400).json({ error: "prompt 不能为空" });
     const cat = safeCat(category);
     if (!cat) return res.status(400).json({ error: "category 无效" });
@@ -178,7 +178,7 @@ app.post("/api/generate", async (req, res) => {
     await fs.writeFile(path.join(DATA_DIR, cat, file), buf);
 
     const item = {
-      id, category: cat, file, url: `/files/${cat}/${file}`,
+      id, category: cat, mode: (typeof mode === "string" && /^[a-z]{1,20}$/.test(mode)) ? mode : null, file, url: `/files/${cat}/${file}`,
       title: (typeof title === "string" && title.trim().slice(0, 120)) || "未命名",
       prompt: prompt.trim(), model: useModel, aspectRatio: aspectRatio || "1:1", imageSize: generationConfig.imageConfig?.imageSize || "1K",
       refCount: parts.length - 1, mimeType, bytes: buf.length,

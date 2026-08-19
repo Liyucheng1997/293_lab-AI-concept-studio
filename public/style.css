@@ -79,6 +79,12 @@ select { appearance: none; -webkit-appearance: none; background-image: url("data
 .panel { border-radius: var(--radius); padding: 22px; }
 .form-panel { background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--border); position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow: auto; }
 .form-panel h2 { font-size: 21px; }
+/* iOS 风分段控件：门店概念图 / 电商产品图 */
+.mode-switch { display: flex; background: var(--surface-2); border-radius: 11px; padding: 3px; margin-bottom: 14px; }
+.mode-switch .seg { flex: 1; border: none; background: transparent; border-radius: 9px; padding: 7px 8px; font-size: 13.5px; color: var(--muted); font-weight: 500; }
+.mode-switch .seg.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.hint.warn { color: #b25000; background: rgba(255,149,0,.10); border-radius: 8px; padding: 6px 8px; }
+.badge { font-size: 10.5px; font-weight: 500; color: var(--blue); background: rgba(0,113,227,.10); border-radius: 999px; padding: 1px 7px; }
 .cat-desc { color: var(--muted); font-size: 13px; margin: 6px 0 16px; }
 .fields { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
