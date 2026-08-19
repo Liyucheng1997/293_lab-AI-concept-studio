@@ -115,7 +115,7 @@
       <div class="gallery" id="gallery"></div>
       <div class="empty hidden" id="emptyState">
         <p>这个项目还没有图片。</p>
-        <p class="muted">在左侧填写选项，点击「生成概念图」，结果会自动保存到 <code>data/gallery/</code> 目录。</p>
+        <p class="muted">在左侧填写选项，点击「生成概念图」，结果会自动保存在本机浏览器（IndexedDB）里，换浏览器 / 清除站点数据会丢失，重要图片请下载。</p>
       </div>
     </section>
   </main>
@@ -123,10 +123,9 @@
   <div class="modal hidden" id="keyModal">
     <div class="modal-card glass-solid">
       <h3>Gemini API Key</h3>
-      <p class="muted">Key 仅保存在你的浏览器 localStorage 中，请求时通过本站后端转发到 Google。<br/>
-        在 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免费获取。
-        若服务器已配置 <code>.env</code>，可留空。</p>
-      <input id="keyInput" type="password" placeholder="AIza..." />
+      <p class="muted">本站是纯静态页面，<b>没有后端</b>：Key 只保存在你本机浏览器的 localStorage 中，生成时由浏览器直接发给 Google（generativelanguage.googleapis.com），不会经过任何第三方服务器，也不会写入本站。<br/>
+        在 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免费获取。公用电脑用完请点「清除」。</p>
+      <input id="keyInput" type="password" placeholder="AIza..." autocomplete="off" />
       <div class="modal-actions">
         <button id="keyClear" class="pill">清除</button>
         <button id="keySave" class="primary">保存</button>

@@ -1,7 +1,7 @@
-﻿{
+{
   "name": "ai-concept-studio",
-  "version": "1.1.0",
-  "description": "AI 概念图生成站 —— 服装设计 / 美甲 / 刺青 / 寿司摆盘 / 理发造型 / 超市 / 百货店 / 宠物店，基于 Nano Banana (Gemini Image) API",
+  "version": "2.0.0",
+  "description": "AI 概念图生成站（纯前端，GitHub Pages）—— 服装设计 / 美甲 / 刺青 / 寿司摆盘 / 理发造型 / 超市 / 百货店 / 宠物店，浏览器直连 Nano Banana (Gemini Image) API",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
     "express": "^4.19.2"
-  }
+  },
+  "homepage": "https://liyucheng1997.github.io/293_lab-AI-concept-studio/"
 }

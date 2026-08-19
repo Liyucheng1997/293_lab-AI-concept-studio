@@ -186,28 +186,181 @@ function ecomMode(o) {
   };
 }
 
+/* ========== Gemini 配置（纯前端：浏览器直连 Google） ========== */
+// Nano Banana = gemini-2.5-flash-image；Nano Banana Pro = gemini-3-pro-image-preview
+const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_MODEL = "gemini-2.5-flash-image";
+const MODELS = ["gemini-2.5-flash-image", "gemini-2.5-flash-image-preview", "gemini-3-pro-image-preview"];
+// 官方定价（美元 / 每百万 token）
+const PRICING = {
+  "gemini-2.5-flash-image":         { input: 0.30, output: 30 },
+  "gemini-2.5-flash-image-preview": { input: 0.30, output: 30 },
+  "gemini-3-pro-image-preview":     { input: 2.00, output: 120 },
+};
+const USD_CNY = Number(localStorage.getItem("usdCny")) || 7.2;
+const IMAGE_SIZES = new Set(["1K", "2K", "4K"]);
+
+function calcCost(model, usage = {}) {
+  const p = PRICING[model] || PRICING[DEFAULT_MODEL];
+  const inTok = usage.promptTokenCount || 0;
+  const outTok = usage.candidatesTokenCount || 0;
+  const usd = (inTok * p.input + outTok * p.output) / 1e6;
+  return { inputTokens: inTok, outputTokens: outTok, totalTokens: usage.totalTokenCount || inTok + outTok, usd, cny: usd * USD_CNY };
+}
+
+// 从 PNG / JPEG / WebP 二进制头解析尺寸
+function parseImageSize(u8) {
+  try {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    const ascii = (a, b) => String.fromCharCode(...u8.subarray(a, b));
+    if (u8[0] === 0x89 && ascii(1, 4) === "PNG") return { width: dv.getUint32(16), height: dv.getUint32(20) };
+    if (u8[0] === 0xff && u8[1] === 0xd8) {
+      let i = 2;
+      while (i < u8.length) {
+        if (u8[i] !== 0xff) { i++; continue; }
+        const marker = u8[i + 1];
+        if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+          return { height: dv.getUint16(i + 5), width: dv.getUint16(i + 7) };
+        }
+        i += 2 + dv.getUint16(i + 2);
+      }
+    }
+    if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {
+      const chunk = ascii(12, 16);
+      const u24 = (o) => u8[o] | (u8[o + 1] << 8) | (u8[o + 2] << 16);
+      if (chunk === "VP8X") return { width: 1 + u24(24), height: 1 + u24(27) };
+      if (chunk === "VP8 ") return { width: dv.getUint16(26, true) & 0x3fff, height: dv.getUint16(28, true) & 0x3fff };
+      if (chunk === "VP8L") { const b = dv.getUint32(21, true); return { width: 1 + (b & 0x3fff), height: 1 + ((b >> 14) & 0x3fff) }; }
+    }
+  } catch {}
+  return { width: null, height: null };
+}
+
+const extOf = (mime) => (mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg");
+const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+
+/**
+ * 浏览器直接调用 Gemini generateContent。
+ * @returns {Promise<{blob: Blob, mimeType: string, bytes: number, width, height, usage, imageSize, model}>}
+ */
+async function callGemini({ apiKey, prompt, images = [], aspectRatio, imageSize, model }) {
+  const useModel = MODELS.includes(model) ? model : DEFAULT_MODEL;
+  const parts = [];
+  for (const img of images.slice(0, 3)) {
+    if (img?.data && img?.mimeType?.startsWith("image/")) parts.push({ inline_data: { mime_type: img.mimeType, data: img.data } });
+  }
+  parts.push({ text: prompt.trim() });
+
+  const generationConfig = { responseModalities: ["IMAGE"] };
+  if (aspectRatio) generationConfig.imageConfig = { aspectRatio };
+  // 2K / 4K 只有 gemini-3-pro-image 支持；flash-image 固定约 1024px
+  if (IMAGE_SIZES.has(imageSize) && imageSize !== "1K" && useModel.includes("3-pro")) {
+    generationConfig.imageConfig = { ...(generationConfig.imageConfig || {}), imageSize };
+  }
+
+  const upstream = await fetch(`${API_BASE}/${useModel}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig }),
+  });
+  const data = await upstream.json().catch(() => ({}));
+  if (!upstream.ok) {
+    const msg = data?.error?.message || `Google 返回 ${upstream.status}`;
+    throw new Error(upstream.status === 400 && /api key/i.test(msg) ? `API Key 无效：${msg}` : msg);
+  }
+
+  const outParts = data?.candidates?.[0]?.content?.parts || [];
+  const first = outParts.find((p) => p.inlineData || p.inline_data);
+  if (!first) {
+    const reason = data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason;
+    throw new Error(`模型没有返回图片${reason ? `（${reason}）` : ""}`);
+  }
+  const d = first.inlineData || first.inline_data;
+  const mimeType = d.mimeType || d.mime_type || "image/png";
+  const u8 = base64ToBytes(d.data);
+  return {
+    blob: new Blob([u8], { type: mimeType }), mimeType, bytes: u8.length, ...parseImageSize(u8),
+    usage: data.usageMetadata, imageSize: generationConfig.imageConfig?.imageSize || "1K", model: useModel, refCount: parts.length - 1,
+  };
+}
+
+/* ========== IndexedDB 画廊存储（图片以 Blob 存本机浏览器） ========== */
+const DB_NAME = "concept-studio", DB_STORE = "items";
+let dbPromise = null;
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const store = req.result.createObjectStore(DB_STORE, { keyPath: "id" });
+      store.createIndex("category", "category", { unique: false });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+async function dbTx(mode, fn) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, mode);
+    const store = tx.objectStore(DB_STORE);
+    let result;
+    const r = fn(store);
+    if (r && typeof r.then === "function") r.then((v) => (result = v), reject);
+    else if (r && "onsuccess" in r) r.onsuccess = () => (result = r.result);
+    else result = r;
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+const dbPut = (item) => dbTx("readwrite", (s) => s.put(item));
+const dbGet = (id) => dbTx("readonly", (s) => s.get(id));
+const dbDelete = (id) => dbTx("readwrite", (s) => s.delete(id));
+const dbListByCat = (cat) => dbTx("readonly", (s) => s.index("category").getAll(cat));
+const dbCountByCat = (cat) => dbTx("readonly", (s) => s.index("category").count(cat));
+async function dbClearCat(cat) {
+  const items = await dbListByCat(cat);
+  await dbTx("readwrite", (s) => { for (const it of items) s.delete(it.id); });
+}
+
+// Blob → 对象 URL 缓存（按 id），避免每次渲染重复创建
+const urlCache = new Map();
+function itemUrl(item) {
+  if (!urlCache.has(item.id)) urlCache.set(item.id, URL.createObjectURL(item.blob));
+  return urlCache.get(item.id);
+}
+function revokeUrl(id) { if (urlCache.has(id)) { URL.revokeObjectURL(urlCache.get(id)); urlCache.delete(id); } }
+
 /* ========== 状态 ========== */
 const $ = (id) => document.getElementById(id);
 let currentCat = "fashion";
 let currentMode = null; // 有 modes 的分类当前所选模式（store / ecom）
 let refImages = []; // {mimeType, data, url}
 let promptDirty = false;
-let serverConfig = { hasServerKey: false, defaultModel: "gemini-2.5-flash-image", models: [], usdCny: 7.2 };
 let galleryItems = []; // 当前分类的持久化图片
 let details = JSON.parse(localStorage.getItem("details") || '{"title":true,"size":true,"cost":true}');
+const getApiKey = () => localStorage.getItem("apiKey") || "";
 
 /* ========== 初始化 ========== */
 async function init() {
-  try { serverConfig = await (await fetch("/api/config")).json(); } catch {}
   const ms = $("modelSelect");
   ms.innerHTML = "";
-  for (const m of serverConfig.models) {
+  for (const m of MODELS) {
     const o = document.createElement("option");
     o.value = m;
     o.textContent = m.includes("3-pro") ? "Nano Banana Pro (gemini-3-pro-image)" : m.includes("preview") ? "Nano Banana (preview)" : "Nano Banana (gemini-2.5-flash-image)";
     ms.appendChild(o);
   }
-  ms.value = localStorage.getItem("model") || serverConfig.defaultModel;
+  ms.value = MODELS.includes(localStorage.getItem("model")) ? localStorage.getItem("model") : DEFAULT_MODEL;
   ms.onchange = () => localStorage.setItem("model", ms.value);
 
   const tabs = $("tabs");
@@ -225,8 +378,32 @@ async function init() {
   });
   bindEvents();
   updateKeyButton();
+  await importLegacyGallery();
   await selectCategory(localStorage.getItem("cat") || "fashion");
   refreshCounts();
+  if (!getApiKey()) $("keyModal").classList.remove("hidden");
+}
+
+/** 旧版（Express 后端 data/gallery）一次性迁移到 IndexedDB：仅本地 npm start 时生效，线上直接跳过 */
+async function importLegacyGallery() {
+  if (localStorage.getItem("legacyImported") || !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+  try {
+    let n = 0;
+    for (const key of Object.keys(CATEGORIES)) {
+      const r = await fetch(`api/gallery/${key}`);
+      if (!r.ok) return;
+      const items = (await r.json()).items || [];
+      for (const it of items) {
+        if (await dbGet(it.id)) continue;
+        const blob = await (await fetch(it.url.replace(/^\//, ""))).blob();
+        const { url, file, ...rest } = it;
+        await dbPut({ ...rest, ext: (file || "").split(".").pop() || extOf(blob.type), blob });
+        n++;
+      }
+    }
+    localStorage.setItem("legacyImported", "1");
+    if (n) setStatus(`已把旧版 data/gallery 的 ${n} 张图导入浏览器本地库`);
+  } catch {}
 }
 
 /** 当前生效的定义：无模式的分类返回自身，有模式的返回当前模式 */
@@ -340,24 +517,29 @@ function bindEvents() {
   $("generate").onclick = generate;
   $("clearGallery").onclick = async () => {
     if (!galleryItems.length) return;
-    if (!confirm(`确定删除「${CATEGORIES[currentCat].name}」项目的全部 ${galleryItems.length} 张图片？此操作会删除本地文件，不可恢复。`)) return;
-    await fetch(`/api/gallery/${currentCat}`, { method: "DELETE" });
+    if (!confirm(`确定删除「${CATEGORIES[currentCat].name}」项目的全部 ${galleryItems.length} 张图片？图片存在你的浏览器里，删除后不可恢复。`)) return;
+    await dbClearCat(currentCat);
+    galleryItems.forEach((i) => revokeUrl(i.id));
     await loadGallery();
     refreshCounts();
   };
 
-  $("keyBtn").onclick = () => { $("keyInput").value = localStorage.getItem("apiKey") || ""; $("keyModal").classList.remove("hidden"); };
-  $("keySave").onclick = () => { localStorage.setItem("apiKey", $("keyInput").value.trim()); $("keyModal").classList.add("hidden"); updateKeyButton(); };
-  $("keyClear").onclick = () => { localStorage.removeItem("apiKey"); $("keyInput").value = ""; updateKeyButton(); };
+  $("keyBtn").onclick = () => { $("keyInput").value = getApiKey(); $("keyModal").classList.remove("hidden"); };
+  $("keySave").onclick = () => {
+    const k = $("keyInput").value.trim();
+    if (k) localStorage.setItem("apiKey", k); else localStorage.removeItem("apiKey");
+    $("keyModal").classList.add("hidden"); updateKeyButton();
+  };
+  $("keyClear").onclick = () => { localStorage.removeItem("apiKey"); $("keyInput").value = ""; updateKeyButton(); setStatus("已清除本机保存的 API Key"); };
   $("keyModal").onclick = (e) => { if (e.target === $("keyModal")) $("keyModal").classList.add("hidden"); };
 
   initLightbox();
 }
 
 function updateKeyButton() {
-  const has = Boolean(localStorage.getItem("apiKey"));
-  $("keyBtn").textContent = has ? "🔑 已设置 Key" : serverConfig.hasServerKey ? "🔑 使用服务器 Key" : "🔑 设置 API Key";
-  $("keyBtn").style.borderColor = has || serverConfig.hasServerKey ? "var(--green)" : "var(--red)";
+  const has = Boolean(getApiKey());
+  $("keyBtn").textContent = has ? "🔑 已设置 Key" : "🔑 设置 API Key";
+  $("keyBtn").style.borderColor = has ? "var(--green)" : "var(--red)";
 }
 
 /* ========== 参考图 ========== */
@@ -405,19 +587,18 @@ function renderThumbs() {
   });
 }
 
-/* ========== 画廊（服务器持久化） ========== */
+/* ========== 画廊（IndexedDB 持久化） ========== */
 async function loadGallery() {
   try {
-    const r = await fetch(`/api/gallery/${currentCat}`);
-    galleryItems = (await r.json()).items || [];
+    galleryItems = (await dbListByCat(currentCat)) || [];
+    galleryItems.sort((a, b) => b.createdAt - a.createdAt);
   } catch { galleryItems = []; }
   renderGallery();
 }
 async function refreshCounts() {
   for (const key of Object.keys(CATEGORIES)) {
     try {
-      const r = await fetch(`/api/gallery/${key}`);
-      const n = ((await r.json()).items || []).length;
+      const n = await dbCountByCat(key);
       const el = document.querySelector(`[data-cnt="${key}"]`);
       if (el) el.textContent = n ? `${n}` : "";
     } catch {}
@@ -440,7 +621,7 @@ function renderGallery() {
   $("emptyState").classList.toggle("hidden", galleryItems.length > 0 || pending.length > 0);
   const totalUsd = galleryItems.reduce((s, i) => s + (i.cost?.usd || 0), 0);
   $("galleryStats").textContent = galleryItems.length
-    ? `${galleryItems.length} 张 · 累计花费 ${fmtUsd(totalUsd)} ≈ ${fmtCny(totalUsd * serverConfig.usdCny)} · 已保存到 data/gallery/${currentCat}/`
+    ? `${galleryItems.length} 张 · 累计花费 ${fmtUsd(totalUsd)} ≈ ${fmtCny(totalUsd * USD_CNY)} · 保存在本机浏览器（IndexedDB）`
     : "";
 }
 
@@ -460,12 +641,13 @@ function makeCard(item) {
   if (details.time) lines.push(`<div class="line"><span>时间</span><b>${fmtTime(item.createdAt)}</b></div>`);
   if (details.prompt) lines.push(`<div class="prompt">${escapeHtml(item.prompt)}</div>`);
 
+  const url = itemUrl(item);
   card.innerHTML = `
     <div class="img-wrap">
-      <img src="${item.url}" alt="${escapeHtml(item.title)}" loading="lazy">
+      <img src="${url}" alt="${escapeHtml(item.title)}" loading="lazy">
       <div class="hover-actions">
         <button class="use" title="用作参考图继续修改">↩</button>
-        <a href="${item.url}" download="${item.title.replace(/[\\/:*?"<>|]/g, "_")}-${item.id}.${item.file.split(".").pop()}"><button title="下载">⬇</button></a>
+        <a href="${url}" download="${item.title.replace(/[\\/:*?"<>|]/g, "_")}-${item.id}.${item.ext || extOf(item.mimeType || "")}"><button title="下载">⬇</button></a>
         <button class="del" title="删除">🗑</button>
       </div>
     </div>
@@ -474,21 +656,23 @@ function makeCard(item) {
   card.querySelector("img").onclick = () => openLightbox(item);
   card.querySelector(".use").onclick = async () => {
     if (refImages.length >= 3) refImages.shift();
-    refImages.push(await urlToRef(item.url));
+    refImages.push(await urlToRef(url));
     renderThumbs(); refreshPrompt();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   card.querySelector(".del").onclick = async () => {
-    if (!confirm(`删除「${item.title}」？本地文件也会被删除。`)) return;
-    await fetch(`/api/gallery/${item.category}/${item.id}`, { method: "DELETE" });
+    if (!confirm(`删除「${item.title}」？将从浏览器本地库中移除。`)) return;
+    await dbDelete(item.id);
+    revokeUrl(item.id);
     galleryItems = galleryItems.filter((i) => i.id !== item.id);
     renderGallery(); refreshCounts();
   };
   card.querySelector(".rename")?.addEventListener("click", async () => {
     const t = prompt("新标题：", item.title);
     if (t == null || !t.trim()) return;
-    const r = await fetch(`/api/gallery/${item.category}/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t.trim() }) });
-    if (r.ok) { item.title = t.trim(); renderGallery(); }
+    item.title = t.trim().slice(0, 120);
+    await dbPut(item);
+    renderGallery();
   });
   return card;
 }
@@ -501,10 +685,10 @@ async function generate() {
   const aspectRatio = $("aspect").value;
   const imageSize = $("imageSize").value;
   const model = $("modelSelect").value;
-  const apiKey = localStorage.getItem("apiKey") || "";
+  const apiKey = getApiKey();
   const category = currentCat, mode = currentMode;
   const title = $("title").value.trim() || autoTitle();
-  if (!apiKey && !serverConfig.hasServerKey) { $("keyModal").classList.remove("hidden"); return setStatus("请先设置 API Key", true); }
+  if (!apiKey) { $("keyModal").classList.remove("hidden"); return setStatus("请先设置 API Key", true); }
   if (activeDef().needsRef && refImages.length === 0) {
     if (!confirm("电商产品图建议上传产品原图，否则模型只能凭描述「编」一个产品。\n\n仍要不带参考图继续生成吗？")) return setStatus("请先上传产品原图", true);
   }
@@ -533,17 +717,21 @@ async function generate() {
   let ok = 0;
   await Promise.all(cards.map(async (card) => {
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
-        body: JSON.stringify({ prompt, category, mode, title, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, imageSize: finalSize, model: finalModel }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const g = await callGemini({ apiKey, prompt, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, imageSize: finalSize, model: finalModel });
+      const item = {
+        id: newId(), category, mode: (typeof mode === "string" && /^[a-z]{1,20}$/.test(mode)) ? mode : null,
+        ext: extOf(g.mimeType), blob: g.blob,
+        title: title.slice(0, 120) || "未命名",
+        prompt, model: g.model, aspectRatio: aspectRatio || "1:1", imageSize: g.imageSize,
+        refCount: g.refCount, mimeType: g.mimeType, bytes: g.bytes, width: g.width, height: g.height,
+        cost: calcCost(g.model, g.usage),
+        createdAt: Date.now(),
+      };
+      await dbPut(item);
       ok++;
       if (category === currentCat) {
-        galleryItems.unshift(data.item);
-        card.replaceWith(makeCard(data.item));
+        galleryItems.unshift(item);
+        card.replaceWith(makeCard(item));
       } else card.remove();
     } catch (err) {
       card.className = "card error";
@@ -558,7 +746,7 @@ async function generate() {
 
   $("generate").disabled = false;
   renderGallery(); refreshCounts();
-  setStatus(ok === count ? `完成，成功生成 ${ok} 张，已保存到本地` : `完成：成功 ${ok} / ${count}`, ok === 0);
+  setStatus(ok === count ? `完成，成功生成 ${ok} 张，已保存到浏览器本地库` : `完成：成功 ${ok} / ${count}`, ok === 0);
 }
 
 /* ========== 看图器：滚轮缩放 / 拖拽平移 ========== */
@@ -595,7 +783,8 @@ function openLightbox(item) {
   $("lightbox").classList.remove("hidden");
   const c = item.cost || {};
   $("lbInfo").textContent = `${item.title} · ${item.width || "?"}×${item.height || "?"} · ${fmtUsd(c.usd || 0)} ≈ ${fmtCny(c.cny || 0)} · ${modelShort(item.model)} · ${fmtTime(item.createdAt)}`;
-  if (img.src.endsWith(item.url)) { fitLightbox(); } else img.src = item.url;
+  const url = itemUrl(item);
+  if (img.src === url) { fitLightbox(); } else img.src = url;
 }
 function fitLightbox() {
   const stage = $("lbStage");
