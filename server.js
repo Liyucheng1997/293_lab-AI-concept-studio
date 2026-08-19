@@ -25,7 +25,7 @@ const PRICING = {
 };
 const USD_CNY = Number(process.env.USD_CNY || 7.2);
 
-const CATEGORIES = new Set(["fashion", "nails", "tattoo", "sushi", "barber"]);
+const CATEGORIES = new Set(["fashion", "nails", "tattoo", "sushi", "barber", "supermarket", "department", "pet"]);
 const DATA_DIR = path.join(__dirname, "data", "gallery");
 for (const c of CATEGORIES) await fs.mkdir(path.join(DATA_DIR, c), { recursive: true });
 

@@ -75,6 +75,51 @@ const CATEGORIES = {
     ],
     prompt: (v, hasRef) => `Hairstyle concept: ${v.gender}, ${v.length}, ${v.style} haircut, hair color: ${v.color}${v.extra !== "无" ? `, ${v.extra}` : ""}. Presentation: ${v.view}. Realistic salon photography, sharp hair texture and strands, natural skin, neutral background.${hasRef ? " If a portrait photo is provided, keep the person's face, identity, skin tone and expression exactly the same and only change the hairstyle/hair color realistically; otherwise use reference images for the hairstyle." : ""}`,
   },
+  supermarket: {
+    name: "🛒 超市",
+    title: "超市陈列 / 促销概念图",
+    desc: "货架陈列、端架堆头、生鲜区布置、促销海报与门头，开店/改陈前先看效果。",
+    refHint: "上传店内现场照片，可在原货架上预览新陈列；也可上传商品图或参考陈列。",
+    fields: [
+      { key: "scene", label: "场景类型", type: "select", options: ["货架陈列（整排）", "端架 / 堆头", "生鲜果蔬区", "冷藏 / 冷冻区", "烘焙 / 熟食区", "收银区 + 冲动购买带", "门头招牌 + 入口", "促销海报 / DM 单", "自助结账区", "整店俯视布局图"] },
+      { key: "category", label: "商品品类", type: "text", placeholder: "例：进口零食 / 有机蔬果 / 饮料 / 日化" },
+      { key: "format", label: "业态风格", type: "select", options: ["社区便利店", "精品超市（如 Ole'）", "仓储会员店（如 Costco）", "日式超市", "欧美大卖场", "生鲜市集风", "无人智慧超市"] },
+      { key: "theme", label: "促销 / 季节主题", type: "select", options: ["无", "开业大吉", "周年庆", "春节年货", "中秋", "双十一 / 618", "夏日清凉", "圣诞", "会员日", "折扣清仓"] },
+      { key: "color", label: "主色调", type: "text", placeholder: "例：清爽绿白 / 品牌红黄" },
+      { key: "view", label: "视角", type: "select", options: ["顾客视角平视", "45° 斜俯", "过道纵深透视", "近景商品特写", "俯视平面图"] },
+    ],
+    prompt: (v, hasRef) => `Supermarket visual merchandising concept: ${v.scene}, products: ${v.category || "mixed grocery"}, store format: ${v.format}${v.theme !== "无" ? `, promotional theme: ${v.theme}` : ""}, color scheme: ${v.color || "clean and bright"}. Camera: ${v.view}. Neat, well-stocked, realistic retail interior photography with proper lighting, price tags and signage where appropriate, no readable text errors.${hasRef ? " If a store photo is provided, keep the store's architecture and fixtures and redo only the merchandising/decoration; otherwise use references for products or display style." : ""}`,
+  },
+  department: {
+    name: "🏬 百货店",
+    title: "百货商场美陈 / 橱窗概念图",
+    desc: "橱窗、专柜、中庭美陈、节日装饰、导视——方案汇报前先出效果图。",
+    refHint: "上传商场现场照片，可在原空间上预览美陈方案；也可上传品牌 VI 或参考图。",
+    fields: [
+      { key: "scene", label: "场景类型", type: "select", options: ["临街橱窗", "品牌专柜 / 中岛", "中庭大型美陈装置", "节日主题装饰", "扶梯 / 通道导视", "VIP 休息区", "化妆品区", "珠宝腕表区", "儿童 / 玩具区", "商场外立面 + 灯光"] },
+      { key: "category", label: "商品 / 品牌品类", type: "text", placeholder: "例：轻奢女装 / 香水彩妆 / 家居生活" },
+      { key: "theme", label: "主题", type: "select", options: ["春夏新品", "秋冬系列", "圣诞", "春节 / 新年", "情人节", "周年庆", "母亲节", "国庆", "艺术展联名", "无主题日常"] },
+      { key: "style", label: "风格", type: "select", options: ["奢华金属感", "极简高级灰", "艺术装置 / 雕塑", "自然植物", "复古 Art Deco", "未来科技 / 灯光", "梦幻马卡龙", "东方美学"] },
+      { key: "color", label: "主色调", type: "text", placeholder: "例：香槟金 + 白 / 圣诞红绿" },
+      { key: "view", label: "视角", type: "select", options: ["顾客正面平视", "45° 斜俯", "低角度仰视（气势）", "近景细节", "全景大场景"] },
+    ],
+    prompt: (v, hasRef) => `Department store visual merchandising concept: ${v.scene} for ${v.category || "premium retail brands"}, theme: ${v.theme}, style: ${v.style}, color scheme: ${v.color || "elegant palette"}. Camera: ${v.view}. High-end retail interior rendering / photography quality, dramatic yet tasteful lighting, premium materials, polished floors, realistic scale of props and mannequins.${hasRef ? " If a photo of the actual space is provided, keep its architecture and only add the display design; otherwise use references for brand identity or style." : ""}`,
+  },
+  pet: {
+    name: "🐶 宠物店",
+    title: "宠物美容 / 宠物店概念图",
+    desc: "宠物美容造型预览、店铺空间、宠物服饰周边、宠物写真——洗剪前先给主人看效果。",
+    refHint: "上传顾客宠物的照片，可保留宠物本体直接「换造型」；也可上传店铺或商品参考图。",
+    fields: [
+      { key: "use", label: "用途", type: "select", options: ["宠物美容造型预览", "宠物服饰 / 配饰概念", "宠物摄影写真", "宠物店门店空间", "宠物用品陈列 / 商品海报", "宠物寄养 / 乐园区"] },
+      { key: "animal", label: "宠物种类", type: "select", options: ["泰迪 / 贵宾", "比熊", "柴犬", "柯基", "金毛", "博美", "雪纳瑞", "边牧", "法斗", "布偶猫", "英短", "美短", "橘猫", "兔子", "仓鼠 / 龙猫", "其他（在补充描述里写）"] },
+      { key: "style", label: "造型 / 风格", type: "select", options: ["泰迪熊装", "羊羔装", "贵宾装（欧陆式）", "运动装（短毛清爽）", "自然长毛修剪", "圆脸小熊头", "萌系染色（耳朵/尾巴）", "节日主题（蝴蝶结/围巾）", "无特定造型"] },
+      { key: "mood", label: "氛围", type: "select", options: ["温馨可爱", "清新自然", "高级简约", "活泼卡通", "节日喜庆", "复古文艺"] },
+      { key: "color", label: "主色调", type: "text", placeholder: "例：奶油白 + 薄荷绿" },
+      { key: "view", label: "展示方式", type: "select", options: ["宠物正面全身照", "宠物侧面 45°", "美容前后对比", "怀抱 / 互动生活感", "店铺空间全景", "商品平铺 / 海报"] },
+    ],
+    prompt: (v, hasRef) => `Pet shop concept: purpose — ${v.use}; pet: ${v.animal}; grooming style / design: ${v.style}; mood: ${v.mood}; color scheme: ${v.color || "soft harmonious palette"}. Presentation: ${v.view}. Realistic photography, healthy fluffy fur with fine detail, correct animal anatomy, clean bright pet-salon lighting.${hasRef ? " If a photo of the customer's pet is provided, keep the same pet (breed, markings, face, eyes) and only change the grooming/outfit; if a store photo is provided keep its architecture and redo the decoration; otherwise use references for style." : ""}`,
+  },
 };
 
 /* ========== 状态 ========== */
