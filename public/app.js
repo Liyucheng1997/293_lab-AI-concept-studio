@@ -120,6 +120,24 @@ const CATEGORIES = {
     ],
     prompt: (v, hasRef) => `Pet shop concept: purpose — ${v.use}; pet: ${v.animal}; grooming style / design: ${v.style}; mood: ${v.mood}; color scheme: ${v.color || "soft harmonious palette"}. Presentation: ${v.view}. Realistic photography, healthy fluffy fur with fine detail, correct animal anatomy, clean bright pet-salon lighting.${hasRef ? " If a photo of the customer's pet is provided, keep the same pet (breed, markings, face, eyes) and only change the grooming/outfit; if a store photo is provided keep its architecture and redo the decoration; otherwise use references for style." : ""}`,
   },
+  product: {
+    name: "🛍 电商产品图",
+    title: "电商 / 打印用产品图",
+    desc: "上传商品原图（狗罐头、水果、百货商品……），保持产品本身不变，一键换成白底主图、场景图、海报或细节图，可直接上架或打印。",
+    refHint: "⚠ 请务必上传产品原图（手机随手拍即可，最好清晰、无遮挡）。模型会保留产品的形状、包装、文字与 Logo，只重做背景、光线和构图。",
+    needsRef: true,
+    fields: [
+      { key: "use", label: "输出类型", type: "select", options: ["电商主图（纯白底）", "场景生活图", "促销海报 / Banner", "细节特写", "多角度组图（3-4 视角）", "堆叠 / 组合陈列图", "手持 / 使用场景图", "线下打印海报（大幅留白）"] },
+      { key: "product", label: "产品名称 / 品类", type: "text", placeholder: "例：狗罐头 / 进口车厘子 / 保温杯 / 面霜" },
+      { key: "bg", label: "背景 / 场景", type: "select", options: ["纯白 #FFFFFF", "浅灰渐变影棚", "大理石台面", "原木桌面", "厨房 / 餐桌", "自然户外 / 草地", "果园 / 农场（生鲜）", "宠物家居场景", "高级黑底", "节日氛围（红金）", "纯色（在主色调里写）"] },
+      { key: "style", label: "风格", type: "select", options: ["电商标准干净", "高端质感", "清新明亮", "促销热闹", "极简北欧", "国潮 / 新中式", "自然有机"] },
+      { key: "platform", label: "目标平台", type: "select", options: ["淘宝 / 天猫 / 京东", "拼多多 / 抖音（促销感）", "亚马逊 / Shopee（白底规范）", "小红书 / Instagram（生活感）", "线下打印（海报 / 展架）", "菜单 / 价签"] },
+      { key: "color", label: "主色调 / 品牌色", type: "text", placeholder: "例：品牌蓝 + 白 / 暖黄" },
+      { key: "props", label: "道具 / 点缀", type: "text", placeholder: "例：新鲜叶子、水珠、狗爪印、丝带（留空则不加）" },
+      { key: "light", label: "光线", type: "select", options: ["柔和影棚光", "自然窗光", "硬光高对比", "逆光通透（生鲜）", "顶光俯拍"] },
+    ],
+    prompt: (v, hasRef) => `E-commerce product photography: ${v.use} for "${v.product || "the product"}". Background/scene: ${v.bg}. Style: ${v.style}, target platform: ${v.platform}, color scheme: ${v.color || "match the product"}${v.props ? `, props: ${v.props}` : ", no extra props"}. Lighting: ${v.light}. Commercial-grade, tack-sharp focus on the product, accurate colors, realistic shadows/reflections, no watermarks, no invented text or logos.${hasRef ? " CRITICAL: the reference photo shows the exact product to feature — keep its shape, proportions, packaging design, label text, logo and colors EXACTLY as-is; do not redesign it. Only re-light, recompose and replace the background/scene." : " Render a generic but realistic product."}`,
+  },
 };
 
 /* ========== 状态 ========== */
@@ -404,11 +422,23 @@ async function generate() {
   if (!prompt) return setStatus("提示词为空", true);
   const count = Number($("count").value);
   const aspectRatio = $("aspect").value;
+  const imageSize = $("imageSize").value;
   const model = $("modelSelect").value;
   const apiKey = localStorage.getItem("apiKey") || "";
   const category = currentCat;
   const title = $("title").value.trim() || autoTitle();
   if (!apiKey && !serverConfig.hasServerKey) { $("keyModal").classList.remove("hidden"); return setStatus("请先设置 API Key", true); }
+  if (CATEGORIES[category].needsRef && refImages.length === 0) {
+    if (!confirm("电商产品图建议上传产品原图，否则模型只能凭描述「编」一个产品。\n\n仍要不带参考图继续生成吗？")) return setStatus("请先上传产品原图", true);
+  }
+  if (imageSize !== "1K" && !model.includes("3-pro")) {
+    if (!confirm(`${imageSize} 分辨率需要 Nano Banana Pro 模型，当前模型只能输出约 1024px。\n\n点「确定」自动切换到 Pro（价格约 3-6 倍），「取消」则用 1K 继续。`)) {
+      $("imageSize").value = "1K";
+    } else {
+      $("modelSelect").value = "gemini-3-pro-image-preview"; localStorage.setItem("model", $("modelSelect").value);
+    }
+  }
+  const finalModel = $("modelSelect").value, finalSize = $("imageSize").value;
 
   $("emptyState").classList.add("hidden");
   $("generate").disabled = true;
@@ -429,7 +459,7 @@ async function generate() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
-        body: JSON.stringify({ prompt, category, title, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, model }),
+        body: JSON.stringify({ prompt, category, title, images: refImages.map(({ mimeType, data }) => ({ mimeType, data })), aspectRatio, imageSize: finalSize, model: finalModel }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
